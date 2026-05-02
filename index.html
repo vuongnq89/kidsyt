@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Kids - TV & Remote</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Màn hình Chọn Chế độ -->
+        <div id="start-screen" class="fullscreen-overlay">
+            <div class="yt-panel">
+                <h1 style="color: #fff; margin-bottom: 20px;">
+                    <span style="color: #FF0000;">▶</span> YouTube Kids
+                </h1>
+                <p style="color: #aaa; margin-bottom: 10px;">Lưu ý: Bạn phải chạy code này trên Local Server (Live Server) hoặc Netlify để YouTube cho phép phát video.</p>
+                <div class="role-buttons" style="margin-top: 20px;">
+                    <button id="btn-mode-tv" class="yt-btn yt-btn-primary" tabindex="1">📺 Mở trên màn hình (TV/Laptop)</button>
+                    <button id="btn-mode-remote" class="yt-btn yt-btn-secondary" tabindex="2">📱 Làm điều khiển từ xa</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= KHU VỰC TV ================= -->
+        <div id="tv-view" class="hidden fullscreen-view">
+            <div id="pairing-info">Mã kết nối TV: <strong id="tv-peer-id">Đang tạo...</strong></div>
+            
+            <div class="video-wrapper">
+                <div id="ytplayer"></div>
+                <div id="click-blocker"></div>
+            </div>
+
+            <div id="controls-bar" class="controls yt-controls">
+                <button id="btn-prev" class="yt-btn yt-btn-icon" tabindex="3">⏮</button>
+                <button id="btn-play-pause" class="yt-btn yt-btn-icon" tabindex="4">⏸</button>
+                <button id="btn-next" class="yt-btn yt-btn-icon" tabindex="5">⏭</button>
+                <div class="spacer"></div>
+                <button id="btn-lock" class="yt-btn yt-btn-secondary" tabindex="6">🔒 Khóa</button>
+                <button id="btn-parent" class="yt-btn yt-btn-secondary" tabindex="7">⚙️ Quản lý</button>
+            </div>
+
+            <button id="btn-unlock" class="hidden yt-btn yt-btn-primary unlock-float" tabindex="1">🔓 Mở khóa màn hình</button>
+        </div>
+
+        <!-- ================= KHU VỰC ĐIỀU KHIỂN ================= -->
+        <div id="remote-view" class="hidden fullscreen-view yt-panel" style="margin: auto;">
+            <h2>📱 Điều khiển từ xa</h2>
+            <div id="remote-setup">
+                <p style="margin: 15px 0;">Nhập "Mã kết nối" đang hiển thị trên TV:</p>
+                <input type="text" id="remote-target-id" class="yt-input" placeholder="Ví dụ: YTKIDS-ABCDE">
+                <button id="btn-connect-tv" class="yt-btn yt-btn-primary" style="margin-top: 15px;">Kết nối TV</button>
+                <p id="remote-status" style="margin-top: 15px; color: #aaa;"></p>
+            </div>
+
+            <div id="remote-controls" class="hidden">
+                <p style="color: #0f9d58; font-weight: bold; margin-bottom: 20px;">✅ Đã kết nối!</p>
+                <div class="remote-grid">
+                    <button id="rem-prev" class="yt-btn yt-btn-icon large-icon">⏮</button>
+                    <button id="rem-play" class="yt-btn yt-btn-icon large-icon">⏯</button>
+                    <button id="rem-next" class="yt-btn yt-btn-icon large-icon">⏭</button>
+                </div>
+                <button id="btn-disconnect" class="yt-btn yt-btn-secondary" style="margin-top: 30px;">Ngắt kết nối</button>
+            </div>
+        </div>
+
+        <!-- ================= MODALS CHUNG ================= -->
+        <!-- Nhập PIN -->
+        <div id="pin-modal" class="modal hidden">
+            <div class="yt-panel">
+                <h2>Xác thực Quản trị</h2>
+                <p style="color: #aaa; margin: 10px 0;">Mật khẩu mặc định: 8989</p>
+                <input type="password" id="pin-input" class="yt-input" tabindex="10" inputmode="numeric" placeholder="****">
+                <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button id="btn-submit-pin" class="yt-btn yt-btn-primary" style="flex: 1;" tabindex="11">Xác nhận</button>
+                    <button id="btn-cancel-pin" class="yt-btn yt-btn-secondary" style="flex: 1;" tabindex="12">Hủy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quản lý (Đã thêm nút Tìm kiếm) -->
+        <div id="parent-modal" class="modal hidden">
+            <div class="yt-panel parent-dashboard">
+                <div class="parent-header">
+                    <h2>Khu vực Quản trị</h2>
+                    <button id="btn-close-parent" class="yt-btn yt-btn-icon">❌</button>
+                </div>
+
+                <div class="parent-tools">
+                    <!-- THANH TÌM KIẾM ĐÃ QUAY LẠI -->
+                    <input type="text" id="search-input" class="yt-input" placeholder="🔍 Tìm video trong danh sách..." style="margin-bottom: 15px; border-color: #3ea6ff;">
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" id="new-vid-id" class="yt-input" placeholder="ID Video mới">
+                        <input type="text" id="new-vid-title" class="yt-input" placeholder="Tên video">
+                    </div>
+                    <button id="btn-add-video" class="yt-btn yt-btn-primary" style="width: 100%;">➕ Thêm Video</button>
+                </div>
+
+                <ul id="playlist-container" class="yt-playlist">
+                    <!-- Sinh tự động -->
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
