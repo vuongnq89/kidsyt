@@ -18,9 +18,6 @@ body, html { height: 100%; background-color: var(--bg-dark); color: var(--text-m
 .splash-title { font-size: 2.5rem; margin-bottom: 30px; font-weight: bold; }
 @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
 
-/* Room Code Display TV */
-.room-code-display { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; font-size: 1.2rem; font-family: monospace; z-index: 50; border: 1px solid #333; }
-
 /* Buttons & Inputs */
 button { border: none; font-family: inherit; cursor: pointer; outline: none; transition: 0.2s; border-radius: 12px; font-weight: bold; }
 .btn-primary { background: var(--text-main); color: var(--bg-dark); padding: 12px 20px; font-size: 1.1rem; }
@@ -35,27 +32,25 @@ button { border: none; font-family: inherit; cursor: pointer; outline: none; tra
 /* --- TV Video Section --- */
 .video-section { flex: 6; position: relative; background: #000; display: flex; flex-direction: column; }
 #ytplayer { width: 100%; height: 100%; pointer-events: none; }
-#click-blocker { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 50px); z-index: 10; }
+#click-blocker { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 50px); z-index: 10; cursor: pointer; }
 
 .loader { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 15; }
 @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
 /* Custom YouTube Controls */
-.yt-custom-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 50px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); z-index: 20; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 15px 5px 15px; }
-.progress-container { width: 100%; height: 5px; background: rgba(255,255,255,0.2); cursor: pointer; margin-bottom: 8px; transition: height 0.1s; }
+.yt-custom-controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 60px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); z-index: 20; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 15px 10px 15px; }
+.progress-container { width: 100%; height: 5px; background: rgba(255,255,255,0.2); cursor: pointer; margin-bottom: 12px; transition: height 0.1s; }
 .progress-container:hover { height: 8px; }
 .progress-bar { height: 100%; background: var(--accent); width: 0%; pointer-events: none; transition: width 0.2s linear; }
 .controls-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-.time-display { font-size: 0.95rem; color: #ddd; font-family: monospace; }
-.icon-btn { background: transparent; color: white; font-size: 1.2rem; padding: 5px; cursor: pointer; border-radius: 0; }
-.icon-btn:hover { color: var(--focus-ring); }
+.time-display { font-size: 0.95rem; color: #ddd; font-family: monospace; font-weight: bold;}
 
 /* --- Kids Playlist & Search --- */
-.kids-playlist-section { flex: 4; display: flex; flex-direction: column; background: var(--bg-dark); padding: 20px; gap: 15px; }
+.kids-playlist-section { flex: 4; display: flex; flex-direction: column; background: var(--bg-dark); padding: 15px 20px; gap: 15px; border-top: 1px solid #222;}
 .search-bar-wrapper { display: flex; gap: 10px; align-items: center; }
-.kids-input { flex: 1; background: var(--panel-dark); border: none; color: white; padding: 15px 25px; border-radius: 25px; font-size: 1.1rem; outline: none; border: 2px solid transparent; transition: 0.2s;}
+.kids-input { flex: 1; background: var(--panel-dark); border: none; color: white; padding: 12px 20px; border-radius: 25px; font-size: 1rem; outline: none; border: 2px solid transparent; transition: 0.2s;}
 .kids-input:focus { border-color: var(--focus-ring); }
-.voice-btn { background: var(--panel-dark); color: white; width: 55px; height: 55px; border-radius: 50%; font-size: 1.5rem; display: flex; justify-content: center; align-items: center; }
+.voice-btn { background: var(--panel-dark); color: white; width: 45px; height: 45px; border-radius: 50%; font-size: 1.2rem; display: flex; justify-content: center; align-items: center; }
 .voice-btn.recording { background: var(--accent); animation: pulse 1.5s infinite; }
 @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,0,0,0.7); } 50% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255,0,0,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,0,0,0); } }
 
@@ -64,16 +59,16 @@ button { border: none; font-family: inherit; cursor: pointer; outline: none; tra
 .kids-grid::-webkit-scrollbar-track { background: var(--panel-dark); border-radius: 4px; }
 .kids-grid::-webkit-scrollbar-thumb { background: var(--btn-hover); border-radius: 4px; }
 
-.vid-card { min-width: 220px; max-width: 260px; background: transparent; cursor: pointer; transition: 0.2s; outline: 3px solid transparent; border-radius: 12px; }
+.vid-card { min-width: 200px; max-width: 240px; background: transparent; cursor: pointer; transition: 0.2s; outline: 3px solid transparent; border-radius: 12px; }
 .vid-card:hover, .vid-card:focus { transform: translateY(-5px); outline-color: var(--focus-ring); }
-.vid-thumb { width: 100%; height: 125px; object-fit: cover; border-radius: 12px; background: #000; }
-.vid-title { padding: 10px 0; font-size: 1rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vid-thumb { width: 100%; height: 110px; object-fit: cover; border-radius: 12px; background: #000; }
+.vid-title { padding: 10px 0; font-size: 0.95rem; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* --- Admin View --- */
 .admin-panel { background: var(--bg-dark); overflow-y: auto; }
 .admin-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--panel-dark); position: sticky; top: 0; z-index: 10;}
-.admin-tabs { display: flex; background: #111; padding: 10px; }
-.tab-btn { flex: 1; background: transparent; color: #888; padding: 12px; border-radius: 0; border-bottom: 2px solid transparent; font-size: 1rem; }
+.admin-tabs { display: flex; background: #111; padding: 10px; flex-wrap: wrap; gap: 5px;}
+.tab-btn { flex: 1; background: transparent; color: #888; padding: 12px; border-radius: 0; border-bottom: 2px solid transparent; font-size: 0.95rem; min-width: 80px;}
 .tab-btn.active { color: var(--text-main); border-bottom: 2px solid var(--text-main); }
 .tab-content { display: none; padding: 20px; }
 .tab-content.active { display: block; }
