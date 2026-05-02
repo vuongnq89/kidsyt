@@ -6,7 +6,7 @@
     <title>YouTube Kids Smart Player</title>
     <link rel="stylesheet" href="style.css">
     
-    <!-- Firebase Compat -->
+    <!-- FIREBASE COMPAT -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
@@ -17,19 +17,20 @@
             <img src="logo.png" alt="Logo" class="splash-logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1384/1384060.png'">
             <h1 class="splash-title">Kids Video Player</h1>
             <div style="display: flex; gap: 20px; flex-direction: column; align-items: center;">
-                <button id="btn-mode-tv" class="btn-primary" style="width: 250px;">📺 Bé xem TV</button>
-                <button id="btn-mode-admin" class="btn-secondary" style="width: 250px;">⚙️ Ba Mẹ quản lý</button>
+                <button id="btn-mode-tv" class="btn-primary" style="width: 250px;">📺 Vào Xem Video</button>
+                <button id="btn-mode-admin" class="btn-secondary" style="width: 250px;">⚙️ Quản lý (Admin)</button>
             </div>
         </div>
 
-        <!-- ================= GIAO DIỆN XEM (TV / PC) ================= -->
+        <!-- ================= GIAO DIỆN NGƯỜI XEM ================= -->
         <div id="tv-view" class="hidden fullscreen-view">
-            <div class="video-section" id="tv-video-section">
+            <div class="video-section">
                 <!-- Loading Spinner -->
                 <div id="loading-spinner" class="hidden loader"></div>
                 
                 <div id="ytplayer"></div>
-                <div id="click-blocker"></div> 
+                <!-- Block Click nhưng cho phép Double Click để Fullscreen -->
+                <div id="click-blocker" title="Nháy đúp để Toàn màn hình"></div> 
                 
                 <!-- BỘ ĐIỀU KHIỂN YOUTUBE CUSTOM -->
                 <div class="yt-custom-controls">
@@ -41,15 +42,16 @@
                             <span class="time-display" id="tv-time-display">0:00 / 0:00</span>
                         </div>
                         <div class="controls-right">
-                            <button id="btn-custom-fullscreen" class="icon-btn" title="Toàn màn hình">🔲 Mở rộng</button>
+                            <button id="btn-custom-fullscreen" class="btn-primary" style="padding: 5px 10px; font-size: 0.9rem;">🔲 Toàn màn hình</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Khu vực Tìm kiếm & Danh sách cho bé -->
+            <!-- Khu vực Tìm kiếm & Gợi ý video -->
             <div class="kids-playlist-section">
                 <div class="search-bar-wrapper">
+                    <h3 style="white-space: nowrap; margin-right: 10px;">🌟 Gợi ý cho bé:</h3>
                     <input type="text" id="kids-search" class="kids-input" placeholder="🔍 Tìm video trong danh sách...">
                     <button id="btn-voice-search" class="voice-btn" title="Tìm bằng giọng nói">🎤</button>
                 </div>
@@ -57,30 +59,25 @@
             </div>
         </div>
 
-        <!-- ================= GIAO DIỆN ADMIN (MOBILE/PC) ================= -->
+        <!-- ================= GIAO DIỆN ADMIN ================= -->
         <div id="remote-view" class="hidden fullscreen-view admin-panel">
             <div class="admin-header">
-                <h2>📱 Bảng Quản Trị</h2>
+                <h2>📱 Quản Trị Hệ Thống</h2>
                 <button class="btn-secondary" onclick="location.reload()" style="padding: 5px 15px;">Thoát</button>
             </div>
 
             <div class="admin-tabs">
-                <button class="tab-btn active" data-tab="tab-remote">📱 Điều Khiển</button>
+                <button class="tab-btn active" data-tab="tab-remote">📱 Điều khiển</button>
                 <button class="tab-btn" data-tab="tab-search">🔍 Thêm Video</button>
-                <button class="tab-btn" data-tab="tab-videos">📺 Danh Sách</button>
+                <button class="tab-btn" data-tab="tab-videos">📺 Danh sách</button>
                 <button class="tab-btn" data-tab="tab-settings">⚙️ Cài đặt</button>
             </div>
 
-            <!-- Tab Điều khiển chung -->
+            <!-- Tab Điều khiển (Đã bỏ nhập mã TV) -->
             <div class="tab-content active" id="tab-remote">
-                <div class="settings-box" style="text-align: center; margin-bottom: 20px;">
-                    <h3 style="color: #2ed573;">✅ Đã đồng bộ hệ thống Global</h3>
-                    <p style="color: #aaa; font-size: 0.9rem; margin-top: 5px;">Mọi thao tác ở đây sẽ áp dụng cho tất cả TV đang mở link.</p>
-                </div>
-
-                <div id="remote-controls">
+                <div id="remote-controls" style="margin-top: 10px;">
                     <div class="now-playing-box">
-                        <p style="color:#aaa; font-size: 0.9rem;">Đang phát trên TV:</p>
+                        <p style="color:#aaa; font-size: 0.9rem;">Đang phát cho tất cả người xem:</p>
                         <h3 id="rem-now-playing" style="color:var(--focus-ring); margin: 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">---</h3>
                         <div class="progress-container" style="height: 4px; pointer-events: none; margin-bottom: 10px;">
                             <div class="progress-bar" id="rem-progress-bar" style="background:var(--focus-ring)"></div>
@@ -117,34 +114,34 @@
                     <h3 style="margin-bottom: 10px;">📌 Thêm Video thủ công</h3>
                     <input type="text" id="manual-vid-id" class="yt-input" placeholder="Link hoặc ID Video (VD: XqZsoesa55w)" style="margin-bottom: 10px;">
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="manual-vid-title" class="yt-input" placeholder="Tên video (Hiển thị cho bé xem)">
+                        <input type="text" id="manual-vid-title" class="yt-input" placeholder="Tên video (Hiển thị cho bé)">
                         <button id="btn-add-manual" class="btn-primary">Thêm ngay</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Tab Quản lý Whitelist -->
+            <!-- Tab Danh sách -->
             <div class="tab-content" id="tab-videos">
                 <ul id="admin-playlist" class="admin-list"></ul>
             </div>
 
-            <!-- Tab Cài Đặt (Đổi mật khẩu) -->
+            <!-- Tab Cài đặt (Đổi mật khẩu) -->
             <div class="tab-content" id="tab-settings">
                 <div class="settings-box">
-                    <h3 style="margin-bottom: 10px;">🔒 Đổi mật khẩu Admin</h3>
-                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Mật khẩu mặc định ban đầu là 8989</p>
-                    <input type="password" id="new-pin-input" class="yt-input" inputmode="numeric" placeholder="Nhập mật khẩu mới (số)" style="margin-bottom: 10px;">
-                    <button id="btn-change-pin" class="btn-primary" style="width: 100%;">Lưu Mật Khẩu</button>
-                    <p id="pin-status" style="margin-top: 10px; font-size: 0.9rem;"></p>
+                    <h3 style="margin-bottom: 10px;">🔑 Đổi Mật Khẩu Admin</h3>
+                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:10px;">Mật khẩu dùng để truy cập vào bảng quản trị này.</p>
+                    <input type="password" id="new-pin-input" class="yt-input" placeholder="Nhập mật khẩu mới..." style="margin-bottom: 10px;">
+                    <button id="btn-change-pin" class="btn-primary" style="width: 100%;">Lưu thay đổi</button>
                 </div>
             </div>
         </div>
 
-        <!-- ================= MODAL NHẬP PIN ================= -->
+        <!-- ================= MODAL NHẬP MẬT KHẨU ================= -->
         <div id="pin-modal" class="modal hidden">
             <div class="yt-panel" style="text-align: center;">
-                <h2 style="margin-bottom: 15px;">Mã Khóa Admin</h2>
-                <input type="password" id="pin-input" class="yt-input" inputmode="numeric" placeholder="****">
+                <h2 style="margin-bottom: 15px;">Mã Khóa Ứng Dụng</h2>
+                <p style="color: #aaa; margin-bottom: 15px;">Vui lòng nhập mật khẩu Admin</p>
+                <input type="password" id="pin-input" class="yt-input" placeholder="Mật khẩu...">
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button id="btn-submit-pin" class="btn-primary" style="flex: 1;">Vào</button>
                     <button id="btn-cancel-pin" class="btn-secondary" style="flex: 1;">Hủy</button>
