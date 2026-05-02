@@ -5,67 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Kids Smart Player</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Firebase App & Realtime Database -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
     <div id="app">
-        <!-- ================= MÀN HÌNH CHỜ ================= -->
+        <!-- MÀN HÌNH CHỜ -->
         <div id="start-screen" class="fullscreen-view splash-screen">
             <img src="logo.png" alt="Logo" class="splash-logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1384/1384060.png'">
             <h1 class="splash-title">Kids Video Player</h1>
             <div style="display: flex; gap: 20px; flex-direction: column; align-items: center;">
-                <button id="btn-mode-tv" class="btn-primary" tabindex="1" style="width: 250px;">📺 Bé xem TV</button>
-                <button id="btn-mode-admin" class="btn-secondary" tabindex="2" style="width: 250px; font-size: 1rem;">⚙️ Ba Mẹ quản lý</button>
+                <button id="btn-mode-tv" class="btn-primary" style="width: 250px;">📺 Bé xem TV</button>
+                <button id="btn-mode-admin" class="btn-secondary" style="width: 250px;">⚙️ Ba Mẹ quản lý</button>
             </div>
         </div>
 
-        <!-- ================= GIAO DIỆN XEM (TV / PC) ================= -->
-        <div id="tv-view" class="hidden fullscreen-view" id="fullscreen-container">
+        <!-- GIAO DIỆN XEM (TV / PC) -->
+        <div id="tv-view" class="hidden fullscreen-view">
             <div class="video-section">
-                <div id="ytplayer"></div>
-                <div id="click-blocker"></div> <!-- Chặn click mở link YouTube -->
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="hidden loader"></div>
                 
-                <!-- BỘ ĐIỀU KHIỂN CUSTOM GIỐNG YOUTUBE -->
-                <div class="yt-custom-controls" id="custom-controls">
-                    <div class="progress-container" id="progress-container">
-                        <div class="progress-bar" id="progress-bar"></div>
+                <div id="ytplayer"></div>
+                <div id="click-blocker"></div> 
+                
+                <div class="yt-custom-controls">
+                    <div class="progress-container" id="tv-progress-container">
+                        <div class="progress-bar" id="tv-progress-bar"></div>
                     </div>
                     <div class="controls-row">
                         <div class="controls-left">
-                            <button id="btn-custom-play" class="icon-btn">⏸</button>
-                            <span class="time-display"><span id="current-time">0:00</span> / <span id="duration-time">0:00</span></span>
+                            <span class="time-display" id="tv-time-display">0:00 / 0:00</span>
                         </div>
                         <div class="controls-right">
-                            <button id="btn-custom-loop" class="icon-btn" title="Lặp lại">🔁</button>
+                            <span style="color:#aaa; font-size:0.9rem;">Mã TV: <b style="color:#fff;">1111</b></span>
                             <button id="btn-custom-fullscreen" class="icon-btn" title="Toàn màn hình">🔲</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Khu vực Tìm kiếm cho bé (Có Voice Search) -->
             <div class="kids-playlist-section">
-                <div class="search-bar-wrapper">
-                    <input type="text" id="kids-search" class="kids-input" placeholder="🔍 Tìm video bé yêu thích..." tabindex="2">
-                    <button id="btn-voice-search" class="voice-btn" title="Tìm bằng giọng nói">🎤</button>
-                </div>
-                <div id="kids-playlist-container" class="kids-grid">
-                    <!-- Sinh tự động -->
-                </div>
+                <input type="text" id="kids-search" class="kids-input" placeholder="🔍 Tìm video trong danh sách...">
+                <div id="kids-playlist-container" class="kids-grid"></div>
             </div>
         </div>
 
-        <!-- ================= GIAO DIỆN ADMIN ================= -->
+        <!-- GIAO DIỆN ADMIN (MOBILE) -->
         <div id="remote-view" class="hidden fullscreen-view admin-panel">
             <div class="admin-header">
                 <h2>📱 Bảng Quản Trị</h2>
-                <button class="btn-secondary" onclick="location.reload()" style="padding: 5px 15px; font-size: 0.9rem;">Thoát</button>
+                <button class="btn-secondary" onclick="location.reload()" style="padding: 5px 15px;">Thoát</button>
             </div>
 
             <div class="admin-tabs">
                 <button class="tab-btn active" data-tab="tab-remote">📱 Remote</button>
-                <button class="tab-btn" data-tab="tab-search">🔍 Tìm & Thêm</button>
-                <button class="tab-btn" data-tab="tab-videos">📺 Quản lý Whitelist</button>
+                <button class="tab-btn" data-tab="tab-search">🔍 Tìm YouTube</button>
+                <button class="tab-btn" data-tab="tab-videos">📺 Whitelist</button>
             </div>
 
             <!-- Tab Remote -->
@@ -75,42 +72,53 @@
                     <button id="btn-connect-tv" class="btn-primary" style="margin-top: 10px; width: 100%;">Kết nối TV</button>
                     <p id="remote-status" class="status-text"></p>
                 </div>
-                <div id="remote-controls" class="hidden">
+
+                <div id="remote-controls" class="hidden" style="margin-top: 20px;">
+                    <div class="now-playing-box">
+                        <p style="color:#aaa; font-size: 0.9rem;">Đang phát trên TV:</p>
+                        <h3 id="rem-now-playing" style="color:var(--focus-ring); margin: 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">---</h3>
+                        <div class="progress-container" style="height: 4px; pointer-events: none; margin-bottom: 10px;">
+                            <div class="progress-bar" id="rem-progress-bar" style="background:var(--focus-ring)"></div>
+                        </div>
+                    </div>
+
                     <div class="remote-grid">
                         <button id="rem-prev" class="btn-icon large-icon">⏮</button>
                         <button id="rem-play" class="btn-icon large-icon" style="background: #ff0000;">⏯</button>
                         <button id="rem-next" class="btn-icon large-icon">⏭</button>
                     </div>
+
+                    <div class="volume-box">
+                        <span style="font-size:1.5rem;">🔉</span>
+                        <input type="range" id="rem-volume" min="0" max="100" value="100" style="flex:1;">
+                        <span style="font-size:1.5rem;">🔊</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Tab Tìm kiếm thực tế trên YouTube -->
+            <!-- Tab Search API -->
             <div class="tab-content" id="tab-search">
                 <div class="settings-box">
-                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:10px;">Nhập YouTube API Key để tìm kiếm thực tế (Lấy tại Google Cloud Console):</p>
-                    <input type="password" id="yt-api-key" class="yt-input" placeholder="AIzaSy...">
-                    
+                    <input type="password" id="yt-api-key" class="yt-input" placeholder="Nhập YouTube API Key (AIzaSy...)">
                     <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <input type="text" id="live-search-input" class="yt-input" placeholder="Nhập từ khóa tìm kiếm trên YouTube...">
+                        <input type="text" id="live-search-input" class="yt-input" placeholder="Tìm video...">
                         <button id="btn-live-search" class="btn-primary">Tìm</button>
                     </div>
                 </div>
-                <div id="live-search-results" class="admin-list" style="margin-top: 20px;">
-                    <!-- Kết quả tìm kiếm hiển thị ở đây -->
-                </div>
+                <div id="live-search-results" class="admin-list" style="margin-top: 20px;"></div>
             </div>
 
-            <!-- Tab Quản lý Whitelist -->
+            <!-- Tab Whitelist -->
             <div class="tab-content" id="tab-videos">
                 <ul id="admin-playlist" class="admin-list"></ul>
             </div>
         </div>
 
-        <!-- ================= MODAL NHẬP PIN ================= -->
+        <!-- MODAL NHẬP PIN -->
         <div id="pin-modal" class="modal hidden">
             <div class="yt-panel" style="text-align: center;">
                 <h2 style="margin-bottom: 15px;">Xác thực Ba Mẹ</h2>
-                <input type="password" id="pin-input" class="yt-input" tabindex="10" inputmode="numeric" placeholder="PIN: 8989">
+                <input type="password" id="pin-input" class="yt-input" inputmode="numeric" placeholder="PIN: 8989">
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button id="btn-submit-pin" class="btn-primary" style="flex: 1;">Vào</button>
                     <button id="btn-cancel-pin" class="btn-secondary" style="flex: 1;">Hủy</button>
