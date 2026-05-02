@@ -6,7 +6,7 @@
     <title>YouTube Kids Smart Player</title>
     <link rel="stylesheet" href="style.css">
     
-    <!-- DÙNG FIREBASE COMPAT ĐỂ KHÔNG BỊ LỖI KHI CHẠY FILE TRỰC TIẾP TRÊN MÁY TÍNH -->
+    <!-- Firebase Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
@@ -24,12 +24,7 @@
 
         <!-- ================= GIAO DIỆN XEM (TV / PC) ================= -->
         <div id="tv-view" class="hidden fullscreen-view">
-            <!-- Hiển thị mã phòng động -->
-            <div class="room-code-display">
-                Mã TV: <b id="display-room-code" style="color: var(--focus-ring);">----</b>
-            </div>
-
-            <div class="video-section">
+            <div class="video-section" id="tv-video-section">
                 <!-- Loading Spinner -->
                 <div id="loading-spinner" class="hidden loader"></div>
                 
@@ -46,7 +41,7 @@
                             <span class="time-display" id="tv-time-display">0:00 / 0:00</span>
                         </div>
                         <div class="controls-right">
-                            <button id="btn-custom-fullscreen" class="icon-btn" title="Toàn màn hình">🔲</button>
+                            <button id="btn-custom-fullscreen" class="icon-btn" title="Toàn màn hình">🔲 Mở rộng</button>
                         </div>
                     </div>
                 </div>
@@ -70,20 +65,20 @@
             </div>
 
             <div class="admin-tabs">
-                <button class="tab-btn active" data-tab="tab-remote">📱 Remote</button>
+                <button class="tab-btn active" data-tab="tab-remote">📱 Điều Khiển</button>
                 <button class="tab-btn" data-tab="tab-search">🔍 Thêm Video</button>
-                <button class="tab-btn" data-tab="tab-videos">📺 Whitelist</button>
+                <button class="tab-btn" data-tab="tab-videos">📺 Danh Sách</button>
+                <button class="tab-btn" data-tab="tab-settings">⚙️ Cài đặt</button>
             </div>
 
-            <!-- Tab Remote Control -->
+            <!-- Tab Điều khiển chung -->
             <div class="tab-content active" id="tab-remote">
-                <div class="remote-box">
-                    <input type="text" id="remote-target-id" class="yt-input" placeholder="Nhập Mã TV (4 số hiển thị trên TV)">
-                    <button id="btn-connect-tv" class="btn-primary" style="margin-top: 10px; width: 100%;">Kết nối TV</button>
-                    <p id="remote-status" class="status-text" style="margin-top: 10px;"></p>
+                <div class="settings-box" style="text-align: center; margin-bottom: 20px;">
+                    <h3 style="color: #2ed573;">✅ Đã đồng bộ hệ thống Global</h3>
+                    <p style="color: #aaa; font-size: 0.9rem; margin-top: 5px;">Mọi thao tác ở đây sẽ áp dụng cho tất cả TV đang mở link.</p>
                 </div>
 
-                <div id="remote-controls" class="hidden" style="margin-top: 20px;">
+                <div id="remote-controls">
                     <div class="now-playing-box">
                         <p style="color:#aaa; font-size: 0.9rem;">Đang phát trên TV:</p>
                         <h3 id="rem-now-playing" style="color:var(--focus-ring); margin: 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">---</h3>
@@ -106,9 +101,8 @@
                 </div>
             </div>
 
-            <!-- Tab Thêm Video (YouTube API) -->
+            <!-- Tab Thêm Video -->
             <div class="tab-content" id="tab-search">
-                <!-- Thêm nguyên Kênh -->
                 <div class="settings-box">
                     <h3 style="margin-bottom: 10px;">📡 Thêm toàn bộ kênh YouTube</h3>
                     <p style="color:#aaa; font-size:0.9rem; margin-bottom:10px;">Nhập ID kênh (VD: UCX6OQ3...)</p>
@@ -119,7 +113,6 @@
                     <div id="api-status" style="margin-top: 15px; font-size: 0.95rem;"></div>
                 </div>
 
-                <!-- Thêm Video thủ công -->
                 <div class="settings-box" style="margin-top: 20px;">
                     <h3 style="margin-bottom: 10px;">📌 Thêm Video thủ công</h3>
                     <input type="text" id="manual-vid-id" class="yt-input" placeholder="Link hoặc ID Video (VD: XqZsoesa55w)" style="margin-bottom: 10px;">
@@ -134,13 +127,23 @@
             <div class="tab-content" id="tab-videos">
                 <ul id="admin-playlist" class="admin-list"></ul>
             </div>
+
+            <!-- Tab Cài Đặt (Đổi mật khẩu) -->
+            <div class="tab-content" id="tab-settings">
+                <div class="settings-box">
+                    <h3 style="margin-bottom: 10px;">🔒 Đổi mật khẩu Admin</h3>
+                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">Mật khẩu mặc định ban đầu là 8989</p>
+                    <input type="password" id="new-pin-input" class="yt-input" inputmode="numeric" placeholder="Nhập mật khẩu mới (số)" style="margin-bottom: 10px;">
+                    <button id="btn-change-pin" class="btn-primary" style="width: 100%;">Lưu Mật Khẩu</button>
+                    <p id="pin-status" style="margin-top: 10px; font-size: 0.9rem;"></p>
+                </div>
+            </div>
         </div>
 
         <!-- ================= MODAL NHẬP PIN ================= -->
         <div id="pin-modal" class="modal hidden">
             <div class="yt-panel" style="text-align: center;">
-                <h2 style="margin-bottom: 15px;">Mã Khóa Ứng Dụng</h2>
-                <p style="color: #aaa; margin-bottom: 15px;">Mật khẩu mặc định là 8989</p>
+                <h2 style="margin-bottom: 15px;">Mã Khóa Admin</h2>
                 <input type="password" id="pin-input" class="yt-input" inputmode="numeric" placeholder="****">
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button id="btn-submit-pin" class="btn-primary" style="flex: 1;">Vào</button>
@@ -150,7 +153,6 @@
         </div>
     </div>
     
-    <!-- Không dùng module nữa để tránh lỗi CORS khi mở file trực tiếp -->
     <script src="script.js"></script>
 </body>
 </html>
