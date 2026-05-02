@@ -1,9 +1,6 @@
 // ==============================================================
-// 1. CẤU HÌNH FIREBASE V10 & YOUTUBE API
+// 1. CẤU HÌNH FIREBASE & YOUTUBE API
 // ==============================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getDatabase, ref, onValue, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-
 const firebaseConfig = {
     apiKey: "AIzaSy_YOUR_FIREBASE_API_KEY",
     authDomain: "your-project.firebaseapp.com",
@@ -14,24 +11,28 @@ const firebaseConfig = {
     appId: "1:123:web:abc"
 };
 
-// Cần key thật để chạy tính năng tìm kênh.
 const YOUTUBE_API_KEY = "AIzaSy_YOUR_YOUTUBE_API_KEY_HERE"; 
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+let db;
+try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+} catch (error) {
+    console.warn("Chưa cấu hình Firebase. Giao diện hoạt động nhưng không lưu dữ liệu:", error);
+}
 
 // ==============================================================
-// 2. BIẾN TOÀN CỤC & BẢO MẬT
+// 2. BIẾN TOÀN CỤC (GLOBAL MODE)
 // ==============================================================
-const HASHED_PIN = btoa("8989"); 
-let TV_ROOM_ID = ""; // Sẽ được tạo động khi bật TV
+const GLOBAL_ROOM = "global_tv"; // Mã cố định, áp dụng cho tất cả người xem
+let adminPinBase64 = "ODk4OQ=="; // Mặc định là 8989
 
 let player;
 let isTVMode = false;
 let currentPlaylist = [];
-let remoteConnected = false;
-let uiSyncInterval; // Chạy UI local cho TV
-let remoteLocalInterval; // Chạy UI local cho Remote
+let uiSyncInterval; 
+let remoteLocalInterval; 
+let remoteStateCache = null;
 
 const el = {
     startScreen: document.getElementById('start-screen'),
@@ -47,9 +48,16 @@ function sanitizeText(text) {
     return span.innerHTML;
 }
 
-// Generate random 4-digit room code
-function generateRoomCode() {
-    return Math.floor(1000 + Math.random() * 9000).toString();
+// Đồng bộ Mật khẩu Admin từ Firebase khi vừa tải trang
+if (db) {
+    db.ref(`${GLOBAL_ROOM}/pin`).on('value', snap => {
+        if (snap.exists()) {
+            adminPinBase64 = snap.val();
+        } else {
+            // Nếu chưa có, tạo mặc định 8989
+            db.ref(`${GLOBAL_ROOM}/pin`).set(adminPinBase64);
+        }
+    });
 }
 
 // ==============================================================
@@ -57,9 +65,6 @@ function generateRoomCode() {
 // ==============================================================
 document.getElementById('btn-mode-tv').addEventListener('click', () => {
     isTVMode = true;
-    TV_ROOM_ID = generateRoomCode();
-    document.getElementById('display-room-code').innerText = TV_ROOM_ID;
-    
     el.startScreen.classList.add('hidden');
     el.tvView.classList.remove('hidden');
     initTVMode();
@@ -67,29 +72,34 @@ document.getElementById('btn-mode-tv').addEventListener('click', () => {
 
 document.getElementById('btn-mode-admin').addEventListener('click', () => {
     el.pinModal.classList.remove('hidden');
+    document.getElementById('pin-input').focus();
 });
 
 document.getElementById('btn-submit-pin').addEventListener('click', () => {
     const input = document.getElementById('pin-input').value;
-    if (btoa(input) === HASHED_PIN) {
+    if (btoa(input) === adminPinBase64) {
         el.pinModal.classList.add('hidden');
         el.startScreen.classList.add('hidden');
         el.remoteView.classList.remove('hidden');
+        document.getElementById('pin-input').value = "";
+        initAdminMode(); // Mở luôn vì không cần kết nối TV nữa
     } else {
-        alert("Sai mã PIN!");
+        alert("Sai mật khẩu Admin!");
         document.getElementById('pin-input').value = "";
     }
 });
 document.getElementById('btn-cancel-pin').addEventListener('click', () => el.pinModal.classList.add('hidden'));
 
 // ==============================================================
-// 4. LOGIC CHẾ ĐỘ TV (KIDS VIEW)
+// 4. LOGIC CHẾ ĐỘ NGƯỜI XEM (VIEWER/TV)
 // ==============================================================
 function initTVMode() {
     loadYouTubeAPI();
     
-    const playlistRef = ref(db, `rooms/${TV_ROOM_ID}/playlist`);
-    onValue(playlistRef, (snapshot) => {
+    if(!db) return;
+
+    // Lấy danh sách video chung toàn cầu
+    db.ref(`${GLOBAL_ROOM}/playlist`).on('value', (snapshot) => {
         const data = snapshot.val();
         currentPlaylist = data ? Object.values(data) : [];
         renderKidsPlaylist(document.getElementById('kids-search').value);
@@ -99,19 +109,20 @@ function initTVMode() {
         }
     });
 
-    const commandRef = ref(db, `rooms/${TV_ROOM_ID}/command`);
-    onValue(commandRef, (snapshot) => {
+    // Nhận lệnh từ Admin
+    db.ref(`${GLOBAL_ROOM}/command`).on('value', (snapshot) => {
         const cmd = snapshot.val();
         if(!cmd || !player) return;
 
         switch(cmd.action) {
             case 'play': player.playVideo(); break;
             case 'pause': player.pauseVideo(); break;
-            case 'play_id': playById(cmd.payload); break; // Sửa lỗi index
+            case 'play_id': playById(cmd.payload); break; 
             case 'volume': player.setVolume(cmd.payload); break;
         }
     });
 
+    // Điều khiển bằng phím cứng
     document.addEventListener('keydown', (e) => {
         if(!isTVMode || !player) return;
         const vol = player.getVolume();
@@ -124,20 +135,30 @@ function initTVMode() {
         }
     });
 
-    document.getElementById('btn-custom-fullscreen').addEventListener('click', () => {
-        if (!document.fullscreenElement) el.tvView.requestFullscreen?.() || el.tvView.webkitRequestFullscreen?.();
-        else document.exitFullscreen?.() || document.webkitExitFullscreen?.();
-    });
+    // Xử lý nút Fullscreen
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            el.tvView.requestFullscreen?.() || el.tvView.webkitRequestFullscreen?.();
+            document.getElementById('btn-custom-fullscreen').innerHTML = "🔲 Thu nhỏ";
+        } else {
+            document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+            document.getElementById('btn-custom-fullscreen').innerHTML = "🔲 Toàn màn hình";
+        }
+    };
+    
+    // Nút và Nháy đúp
+    document.getElementById('btn-custom-fullscreen').addEventListener('click', toggleFullscreen);
+    document.getElementById('click-blocker').addEventListener('dblclick', toggleFullscreen);
 
+    // Tua video
     document.getElementById('tv-progress-container').addEventListener('click', (e) => {
         if(!player) return;
         const rect = e.target.getBoundingClientRect();
         const seekTime = (e.clientX - rect.left) / rect.width * player.getDuration();
         player.seekTo(seekTime, true);
-        syncStateToFirebase(); // Sync ngay khi tua
+        syncStateToFirebase(); 
     });
 
-    // Update UI Local cho TV
     uiSyncInterval = setInterval(updateTVUI, 500);
 }
 
@@ -168,16 +189,13 @@ function onPlayerStateChange(e) {
 
     if (e.data === YT.PlayerState.ENDED) playNextAuto();
     
-    // Chỉ cập nhật Firebase khi Play/Pause/Buffer (Tối ưu hiệu năng mạng)
     if ([YT.PlayerState.PLAYING, YT.PlayerState.PAUSED, YT.PlayerState.CUED].includes(e.data)) {
         syncStateToFirebase();
     }
 }
 
 function playById(videoId) {
-    if (player && videoId) {
-        player.loadVideoById(videoId);
-    }
+    if (player && videoId) player.loadVideoById(videoId);
 }
 
 function playNextAuto() {
@@ -201,7 +219,6 @@ function formatTime(sec) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// Chạy nội bộ cho TV để vẽ thanh thời gian, không đụng đến Firebase
 function updateTVUI() {
     if(player && player.getPlayerState) {
         const curr = player.getCurrentTime() || 0;
@@ -211,9 +228,8 @@ function updateTVUI() {
     }
 }
 
-// Báo cáo Snapshot tĩnh lên Firebase khi có Event
 function syncStateToFirebase() {
-    if(player && player.getPlayerState) {
+    if(player && player.getPlayerState && db) {
         const state = player.getPlayerState();
         const curr = player.getCurrentTime() || 0;
         const dur = player.getDuration() || 0;
@@ -221,11 +237,11 @@ function syncStateToFirebase() {
         const videoId = currentUrl.split('v=')[1]?.substring(0, 11);
         const activeVid = currentPlaylist.find(v => v.id === videoId);
 
-        set(ref(db, `rooms/${TV_ROOM_ID}/state`), {
+        db.ref(`${GLOBAL_ROOM}/state`).set({
             isPlaying: state === YT.PlayerState.PLAYING,
             currentTime: curr,
             duration: dur,
-            updatedAt: Date.now(), // Rất quan trọng để Remote tự nội suy
+            updatedAt: Date.now(), 
             nowPlayingTitle: activeVid ? activeVid.title : 'Đang tải...',
             nowPlayingId: videoId
         });
@@ -233,17 +249,19 @@ function syncStateToFirebase() {
 }
 
 function syncVolume() {
-    if (player) set(ref(db, `rooms/${TV_ROOM_ID}/volume`), player.getVolume());
+    if (player && db) db.ref(`${GLOBAL_ROOM}/volume`).set(player.getVolume());
 }
 
 // ==============================================================
-// 5. TÌM KIẾM TRẺ EM & VOICE SEARCH
+// 5. TÌM KIẾM TRẺ EM & GỢI Ý (VIEWER VIEW)
 // ==============================================================
 function renderKidsPlaylist(keyword = "") {
     const container = document.getElementById('kids-playlist-container');
     container.innerHTML = "";
     
+    // Tìm kiếm trong danh sách cho phép
     const filtered = currentPlaylist.filter(vid => vid.title.toLowerCase().includes(keyword.toLowerCase()));
+    
     filtered.forEach((vid) => {
         const card = document.createElement('div');
         card.className = 'vid-card';
@@ -252,8 +270,9 @@ function renderKidsPlaylist(keyword = "") {
             <img src="https://img.youtube.com/vi/${sanitizeText(vid.id)}/mqdefault.jpg" class="vid-thumb">
             <div class="vid-title">${sanitizeText(vid.title)}</div>
         `;
-        card.onclick = () => playById(vid.id);
-        card.onkeydown = (e) => { if(e.key === 'Enter') playById(vid.id); };
+        // Cho người xem bấm chọn video trực tiếp
+        card.onclick = () => { playById(vid.id); syncStateToFirebase(); };
+        card.onkeydown = (e) => { if(e.key === 'Enter') { playById(vid.id); syncStateToFirebase(); } };
         container.appendChild(card);
     });
 }
@@ -282,39 +301,25 @@ if(SpeechRecognition) {
 }
 
 // ==============================================================
-// 6. LOGIC ADMIN (MOBILE REMOTE)
+// 6. LOGIC ADMIN (GLOBAL REMOTE)
 // ==============================================================
-let remoteStateCache = null;
-
 function sendCommand(action, payload = null) {
-    if(!remoteConnected || !TV_ROOM_ID) return;
-    set(ref(db, `rooms/${TV_ROOM_ID}/command`), { action, payload, ts: Date.now() });
+    if(!db) return;
+    db.ref(`${GLOBAL_ROOM}/command`).set({ action, payload, ts: Date.now() });
 }
 
-document.getElementById('btn-connect-tv').addEventListener('click', async () => {
-    const inputCode = document.getElementById('remote-target-id').value.trim();
-    if(!inputCode) return alert("Vui lòng nhập mã TV");
+function initAdminMode() {
+    if(!db) return alert("Chưa kết nối Database!");
 
-    // Kiểm tra phòng có tồn tại không
-    const snapshot = await get(ref(db, `rooms/${inputCode}/state`));
-    if (!snapshot.exists() && !isTVMode) {
-        return alert("TV không trực tuyến hoặc sai mã!");
-    }
-
-    TV_ROOM_ID = inputCode;
-    remoteConnected = true;
-    document.getElementById('remote-status').innerText = "✅ Đã kết nối vào TV: " + TV_ROOM_ID;
-    document.getElementById('remote-controls').classList.remove('hidden');
-
-    // Kéo danh sách
-    onValue(ref(db, `rooms/${TV_ROOM_ID}/playlist`), (snap) => {
+    // Lắng nghe danh sách
+    db.ref(`${GLOBAL_ROOM}/playlist`).on('value', (snap) => {
         const data = snap.val();
         currentPlaylist = data ? Object.values(data) : [];
         renderAdminPlaylist();
     });
 
-    // Lắng nghe State
-    onValue(ref(db, `rooms/${TV_ROOM_ID}/state`), (snap) => {
+    // Lắng nghe trạng thái xem chung
+    db.ref(`${GLOBAL_ROOM}/state`).on('value', (snap) => {
         const state = snap.val();
         if(state) {
             remoteStateCache = state;
@@ -323,7 +328,7 @@ document.getElementById('btn-connect-tv').addEventListener('click', async () => 
         }
     });
 
-    // Tính toán tiến trình local cho điện thoại (tối ưu hóa database)
+    // Chạy thanh thời gian Remote
     if(remoteLocalInterval) clearInterval(remoteLocalInterval);
     remoteLocalInterval = setInterval(() => {
         if(remoteStateCache && remoteStateCache.duration > 0) {
@@ -335,9 +340,9 @@ document.getElementById('btn-connect-tv').addEventListener('click', async () => 
             document.getElementById('rem-progress-bar').style.width = (current/remoteStateCache.duration*100) + '%';
         }
     }, 1000);
-});
+}
 
-// Nút bấm Remote (Sửa lại logic Next/Prev an toàn hơn)
+// Các nút điều khiển
 document.getElementById('rem-play').onclick = () => sendCommand(document.getElementById('rem-play').innerText === '⏸' ? 'pause' : 'play');
 document.getElementById('rem-next').onclick = () => {
     if(!currentPlaylist.length || !remoteStateCache) return;
@@ -351,10 +356,21 @@ document.getElementById('rem-prev').onclick = () => {
 };
 document.getElementById('rem-volume').addEventListener('change', (e) => sendCommand('volume', parseInt(e.target.value)));
 
+// Đổi mật khẩu
+document.getElementById('btn-change-pin').addEventListener('click', () => {
+    const newPin = document.getElementById('new-pin-input').value.trim();
+    if(newPin.length < 4) return alert("Mật khẩu phải có ít nhất 4 ký tự!");
+    
+    if(db) {
+        db.ref(`${GLOBAL_ROOM}/pin`).set(btoa(newPin));
+        alert("✅ Đổi mật khẩu thành công! Hãy ghi nhớ mật khẩu này.");
+        document.getElementById('new-pin-input').value = "";
+        adminPinBase64 = btoa(newPin); // Cập nhật ngay lập tức
+    }
+});
 
-// --- THÊM KÊNH BẰNG YOUTUBE DATA API V3 ---
+
 document.getElementById('btn-add-channel').addEventListener('click', async () => {
-    if(!TV_ROOM_ID) return alert("Vui lòng kết nối TV trước khi thêm!");
     const channelId = document.getElementById('channel-id-input').value.trim();
     const statusDiv = document.getElementById('api-status');
     if (!channelId.startsWith('UC')) return alert("Channel ID phải bắt đầu bằng 'UC'");
@@ -379,8 +395,8 @@ document.getElementById('btn-add-channel').addEventListener('click', async () =>
             }
         });
         
-        if (count > 0) {
-            await set(ref(db, `rooms/${TV_ROOM_ID}/playlist`), currentPlaylist); 
+        if (count > 0 && db) {
+            await db.ref(`${GLOBAL_ROOM}/playlist`).set(currentPlaylist); 
             statusDiv.innerHTML = `<span style='color:#2ed573;'>✅ Thành công! Đã đẩy ${count} video mới lên TV.</span>`;
             document.getElementById('channel-id-input').value = "";
         } else {
@@ -391,9 +407,7 @@ document.getElementById('btn-add-channel').addEventListener('click', async () =>
     }
 });
 
-// --- THÊM VIDEO THỦ CÔNG ---
 document.getElementById('btn-add-manual').addEventListener('click', async () => {
-    if(!TV_ROOM_ID) return alert("Vui lòng kết nối TV trước khi thêm!");
     const id = document.getElementById('manual-vid-id').value.trim();
     const title = document.getElementById('manual-vid-title').value.trim();
     if(!id || !title) return alert("Vui lòng nhập đủ ID và Tên!");
@@ -404,7 +418,7 @@ document.getElementById('btn-add-manual').addEventListener('click', async () => 
 
     if (!currentPlaylist.find(v => v.id === cleanId)) {
         currentPlaylist.push({ id: cleanId, title: title });
-        await set(ref(db, `rooms/${TV_ROOM_ID}/playlist`), currentPlaylist);
+        if(db) await db.ref(`${GLOBAL_ROOM}/playlist`).set(currentPlaylist);
         document.getElementById('manual-vid-id').value = '';
         document.getElementById('manual-vid-title').value = '';
         alert("✅ Đã đẩy video mới lên TV!");
@@ -433,7 +447,7 @@ function renderAdminPlaylist() {
         btnDel.textContent = "Xóa";
         btnDel.onclick = () => {
             currentPlaylist.splice(index, 1);
-            set(ref(db, `rooms/${TV_ROOM_ID}/playlist`), currentPlaylist);
+            if(db) db.ref(`${GLOBAL_ROOM}/playlist`).set(currentPlaylist);
         };
 
         li.appendChild(infoDiv);
@@ -442,7 +456,7 @@ function renderAdminPlaylist() {
     });
 }
 
-// Logic chuyển Tabs Admin
+// Đổi Tabs
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
