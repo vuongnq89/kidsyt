@@ -18,6 +18,9 @@ body, html { height: 100%; background-color: var(--bg-dark); color: var(--text-m
 .splash-title { font-size: 2.5rem; margin-bottom: 30px; font-weight: bold; }
 @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
 
+/* Room Code Display TV */
+.room-code-display { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 12px; font-size: 1.2rem; font-family: monospace; z-index: 50; border: 1px solid #333; }
+
 /* Buttons & Inputs */
 button { border: none; font-family: inherit; cursor: pointer; outline: none; transition: 0.2s; border-radius: 12px; font-weight: bold; }
 .btn-primary { background: var(--text-main); color: var(--bg-dark); padding: 12px 20px; font-size: 1.1rem; }
