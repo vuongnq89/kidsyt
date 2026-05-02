@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Kids Smart Player</title>
     <link rel="stylesheet" href="style.css">
+    
+    <!-- DÙNG FIREBASE COMPAT ĐỂ KHÔNG BỊ LỖI KHI CHẠY FILE TRỰC TIẾP TRÊN MÁY TÍNH -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
 <body>
     <div id="app">
@@ -146,7 +150,7 @@
         </div>
     </div>
     
-    <!-- Script dùng module để hỗ trợ Firebase V10 -->
-    <script type="module" src="script.js"></script>
+    <!-- Không dùng module nữa để tránh lỗi CORS khi mở file trực tiếp -->
+    <script src="script.js"></script>
 </body>
 </html>
