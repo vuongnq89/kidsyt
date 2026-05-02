@@ -9,61 +9,61 @@
 </head>
 <body>
     <div id="app">
-        <!-- ================= MÀN HÌNH CHỜ (SPLASH SCREEN) ================= -->
+        <!-- ================= MÀN HÌNH CHỜ (CHỌN CHẾ ĐỘ RÕ RÀNG) ================= -->
         <div id="start-screen" class="fullscreen-view splash-screen">
-            <img src="logo.png" alt="Logo" class="splash-logo">
+            <img src="logo.png" alt="Logo" class="splash-logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1384/1384060.png'">
             <h1 class="splash-title">Kids Video Player</h1>
-            <button id="btn-start" class="btn-primary" tabindex="1">Bắt đầu xem</button>
+            <div style="display: flex; gap: 20px; flex-direction: column; align-items: center;">
+                <button id="btn-mode-tv" class="btn-primary" tabindex="1" style="width: 250px;">📺 Bé xem TV</button>
+                <button id="btn-mode-admin" class="btn-secondary" tabindex="2" style="width: 250px; font-size: 1rem;">⚙️ Ba Mẹ quản lý (Remote)</button>
+            </div>
         </div>
 
         <!-- ================= GIAO DIỆN XEM (TV / PC) ================= -->
         <div id="tv-view" class="hidden fullscreen-view">
-            <!-- Nút bí mật cho Admin (Click 5 lần) -->
-            <img src="logo.png" id="secret-admin-logo" alt="Admin" title="Click 5 lần để quản trị">
-            
             <div class="video-section">
                 <div id="ytplayer"></div>
                 <div id="click-blocker"></div> <!-- Chặn click Iframe -->
                 
-                <!-- Lớp phủ khi hết giờ (Screen Time) -->
                 <div id="timeout-overlay" class="hidden fullscreen-view splash-screen" style="z-index: 100;">
                     <h1 style="color: #ff4757; font-size: 3rem;">Đã hết giờ xem! ⏰</h1>
                     <p>Bé hãy nghỉ ngơi và quay lại sau nhé.</p>
                 </div>
             </div>
 
-            <!-- Khu vực Danh sách & Tìm kiếm cho bé -->
+            <!-- Khu vực Tìm kiếm (Chỉ lọc trong Whitelist) -->
             <div class="kids-playlist-section">
-                <input type="text" id="kids-search" class="kids-input" placeholder="🔍 Bé muốn xem gì nào?..." tabindex="2">
+                <input type="text" id="kids-search" class="kids-input" placeholder="🔍 Tìm trong danh sách an toàn..." tabindex="2">
                 <div id="kids-playlist-container" class="kids-grid">
                     <!-- Thumbnail video sinh tự động -->
                 </div>
             </div>
         </div>
 
-        <!-- ================= GIAO DIỆN ADMIN & REMOTE (MOBILE) ================= -->
+        <!-- ================= GIAO DIỆN ADMIN & REMOTE ================= -->
         <div id="remote-view" class="hidden fullscreen-view admin-panel">
             <div class="admin-header">
-                <img src="logo.png" alt="Logo" class="admin-logo">
-                <h2>Quản trị & Điều khiển</h2>
+                <h2>📱 Bảng Quản Trị</h2>
+                <button class="btn-secondary" onclick="location.reload()" style="padding: 5px 15px; font-size: 0.9rem;">Thoát</button>
             </div>
 
-            <!-- Tabs: Remote / Quản lý Video / Cài đặt -->
             <div class="admin-tabs">
                 <button class="tab-btn active" data-tab="tab-remote">📱 Remote</button>
                 <button class="tab-btn" data-tab="tab-videos">📺 Video</button>
-                <button class="tab-btn" data-tab="tab-settings">⚙️ Cài đặt</button>
+                <button class="tab-btn" data-tab="tab-settings">⚙️ Hẹn giờ</button>
             </div>
 
+            <!-- Tab Điều khiển -->
             <div class="tab-content active" id="tab-remote">
                 <div class="remote-box">
-                    <input type="text" id="remote-target-id" class="yt-input" placeholder="Nhập Mã TV...">
+                    <p style="margin-bottom: 10px; color: #aaa;">Mã TV mặc định là 1111</p>
+                    <input type="text" id="remote-target-id" class="yt-input" placeholder="Nhập mã TV..." value="1111">
                     <button id="btn-connect-tv" class="btn-primary" style="margin-top: 10px; width: 100%;">Kết nối TV</button>
                     <p id="remote-status" class="status-text"></p>
                 </div>
                 
                 <div id="remote-controls" class="hidden">
-                    <h3 style="color: #2ed573; text-align: center; margin-bottom: 20px;">Đã kết nối TV</h3>
+                    <h3 style="color: #2ed573; text-align: center; margin-bottom: 20px;">✅ Đã kết nối TV</h3>
                     <div class="remote-grid">
                         <button id="rem-prev" class="btn-icon large-icon">⏮</button>
                         <button id="rem-play" class="btn-icon large-icon" style="background: #ff4757;">⏯</button>
@@ -72,46 +72,38 @@
                 </div>
             </div>
 
+            <!-- Tab Thêm Video -->
             <div class="tab-content" id="tab-videos">
                 <div class="add-video-box">
-                    <input type="text" id="new-vid-id" class="yt-input" placeholder="ID Video YouTube (VD: XqZsoesa55w)">
+                    <input type="text" id="new-vid-id" class="yt-input" placeholder="ID Video YouTube (VD: XqZsoesa55w)" style="margin-bottom: 10px;">
                     <input type="text" id="new-vid-title" class="yt-input" placeholder="Tên video hiển thị cho bé">
-                    <input type="text" id="new-vid-thumb" class="yt-input" placeholder="Link ảnh thu nhỏ (Không bắt buộc)">
                     <button id="btn-add-video" class="btn-primary" style="margin-top: 10px; width: 100%;">➕ Thêm vào Whitelist</button>
                 </div>
                 <ul id="admin-playlist" class="admin-list"></ul>
             </div>
 
+            <!-- Tab Cài đặt -->
             <div class="tab-content" id="tab-settings">
                 <div class="settings-box">
-                    <h3>Giới hạn thời gian (Screen Time)</h3>
+                    <h3>Khóa màn hình sau (phút):</h3>
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <input type="number" id="timer-input" class="yt-input" placeholder="Số phút (VD: 30)">
-                        <button id="btn-set-timer" class="btn-primary">Bắt đầu</button>
+                        <input type="number" id="timer-input" class="yt-input" placeholder="VD: 30">
+                        <button id="btn-set-timer" class="btn-primary">Gửi lệnh</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ================= MODAL NHẬP PIN & INFO TV ================= -->
+        <!-- ================= MODAL NHẬP PIN ================= -->
         <div id="pin-modal" class="modal hidden">
             <div class="yt-panel">
-                <h2 style="margin-bottom: 15px;">Xác thực Quản trị</h2>
+                <h2 style="margin-bottom: 15px;">Xác thực Ba Mẹ</h2>
+                <p style="color: #aaa; margin-bottom: 15px;">Mật khẩu: 8989</p>
                 <input type="password" id="pin-input" class="yt-input" tabindex="10" inputmode="numeric" placeholder="****">
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button id="btn-submit-pin" class="btn-primary" style="flex: 1;" tabindex="11">Vào</button>
                     <button id="btn-cancel-pin" class="btn-secondary" style="flex: 1;" tabindex="12">Hủy</button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Modal hiển thị mã TV (Chỉ mở khi nhập đúng PIN trên TV) -->
-        <div id="tv-info-modal" class="modal hidden">
-            <div class="yt-panel" style="text-align: center;">
-                <h2>Thông tin TV</h2>
-                <p style="margin: 20px 0; color: #aaa;">Mã kết nối Điều khiển từ xa:</p>
-                <h1 id="display-tv-id" style="color: #ff4757; letter-spacing: 2px; font-size: 2.5rem;">----</h1>
-                <button id="btn-close-tv-info" class="btn-primary" style="margin-top: 20px; width: 100%;">Đóng</button>
             </div>
         </div>
     </div>
